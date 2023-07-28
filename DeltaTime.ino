@@ -1,3 +1,19 @@
+/**
+ * @author henriberisha
+ * @date July 28th, 2023
+ *
+ * Free to use
+ * Platforms:
+ *    - Arduino,
+ *    - ESP
+ *
+ * I put a lot of comments to explain in detail what the code is doing
+ * Miliseconds are not handled, they will be zero
+ * Only future dates can be calculated, deltaSeconds >= 0
+ * Negative delta is not handled, cannot find past dates
+ * If any argument is inputed as a float, it will be casted to closest (floor) int
+ */
+
 String padd(int valueDigit)
 /**
   Pads single digit with a zero
@@ -16,7 +32,7 @@ String padd(int valueDigit)
     return String(valueDigit);
 }
 
-void calculateTimeBreakdown(int totalSeconds, int &years, int &months, int &days, int &hours, int &minutes, int &seconds)
+void calculateTimeBreakdown(long totalSeconds, int &years, int &months, int &days, int &hours, int &minutes, int &seconds)
 {
   /**
     Calculates the ammount of years, months, days, hours, minutes, and seconds that are contained in the 'totalSeconds'
@@ -77,11 +93,13 @@ void calculateTimeBreakdown(int totalSeconds, int &years, int &months, int &days
   Serial.println("Seconds: " + String(seconds));
 }
 
-String time_ISO8601(int deltaSeconds, int year, int month, int day, int hour, int minute, int second)
+String time_ISO8601(long deltaSeconds, int year, int month, int day, int hour, int minute, int second)
 {
   /**
     Produces the future UTC date-time after 'deltaSeconds' have passed
     It is assumed that input and output will be UTC date-time; change accordingly to your preferences
+    Miliseconds are never handled and they appear zero as '.00'
+
 
     @param deltaSeconds difference of seconds into the future to calculate the new UTC date-time
     @param year actual/present year from UTC date-time (NOW)
@@ -98,7 +116,7 @@ String time_ISO8601(int deltaSeconds, int year, int month, int day, int hour, in
   //  If no seconds have passed, return the present date-time
   if (deltaSeconds == 0)
   {
-    return String(year) + "-" + padd(month) + "-" + padd(day) + "T" + padd(hour) + ":" + padd(minute) + ":" + padd(second) + "Z";
+    return String(year) + "-" + padd(month) + "-" + padd(day) + "T" + padd(hour) + ":" + padd(minute) + ":" + padd(second) + ".00Z";
   }
 
   int years_contained, months_contained, days_contained, hours_contained, minutes_contained, seconds_contained;
@@ -129,7 +147,7 @@ String time_ISO8601(int deltaSeconds, int year, int month, int day, int hour, in
   int new_year = year + years_contained + (add_months / 12);
 
   //  return the future date-time as UTC
-  return String(new_year) + "-" + padd(new_month) + "-" + padd(new_day) + "T" + padd(new_hour) + ":" + padd(new_minute) + ":" + padd(new_second) + "Z";
+  return String(new_year) + "-" + padd(new_month) + "-" + padd(new_day) + "T" + padd(new_hour) + ":" + padd(new_minute) + ":" + padd(new_second) + ".00Z";
 }
 
 void setup()
@@ -137,13 +155,45 @@ void setup()
   Serial.begin(115200);
   delay(2000);
 
-  int totalSeconds = 8000; // Replace this with your desired number of seconds
-  int years = 2023, months = 7, days = 28, hours = 15, minutes = 00, seconds = 30;
+  //  Basic, hardcoded test cases
 
-  Serial.print(time_ISO8601(totalSeconds, years, months, days, hours, minutes, seconds));
+  //  Approximate time when this script was completed
+  //  Date-time: "2023-07-28T05:30:40.00Z"; find the future date-time when 8575 seconds have passed
+  long deltaSeconds = 8575; // Replace this with your desired number of seconds
+  int year_now = 2023, month_now = 7, day_now = 28, hour_now = 5, minute_now = 30, second_now = 40;
+
+  //  This will return the input date-time because delta is zero; no seconds have passed
+  Serial.println("INPUT TIME: " + time_ISO8601(0, year_now, month_now, day_now, hour_now, minute_now, second_now));
+  Serial.println("FUTURE TIME: " + time_ISO8601(deltaSeconds, year_now, month_now, day_now, hour_now, minute_now, second_now));
+
+  Serial.println("\n");
+
+  //  setup for randomized test cases
+  //  if analog input pin 0 is unconnected, random analog
+  //  noise will cause the call to randomSeed() to generate
+  //  different seed numbers each time the sketch runs.
+  //  randomSeed() will then shuffle the random function.
+  randomSeed(analogRead(0));
+
+  Serial.println("Randomized test cases start now...\n");
 }
 
 void loop()
 {
-  // put code here
+  Serial.println("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n");
+
+  //  adjust max to lower as needed
+  long deltaSeconds = random(0, 2147483640); // max is bound by random function that can take up to 2147483647  ~ 68 years
+
+  int year_now = random(1970, 3000); // year generated randomly between [1970, 3000)
+  int month_now = random(1, 13);     // month generated randomly between [1, 13)
+  int day_now = random(1, 31);       // day generated randomly between [1, 31)
+  int hour_now = random(0, 24);      // hour generated randomly between [0, 24)
+  int minute_now = (0, 60);          // minute generated randomly between [0, 60)
+  int second_now = (0, 60);          // second generated randomly between [0, 60)
+
+  Serial.println("INPUT TIME: " + time_ISO8601(0, year_now, month_now, day_now, hour_now, minute_now, second_now));
+  Serial.println("FUTURE TIME: " + time_ISO8601(deltaSeconds, year_now, month_now, day_now, hour_now, minute_now, second_now));
+
+  delay(10000); // wait 10 seconds
 }
